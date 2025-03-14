@@ -41,52 +41,51 @@ pipeline {
         }
         stage("Build"){
             steps{
-                sh "docker build -t shabarimeda03/django-notes-app:${BUILD_NUMBER} ."
+                sh "docker build -t shabarimeda03/django-notes-app:${env.BUILD_NUMBER} ."
             }
         }
         stage("Upload docker image"){
             steps{
                 withCredentials([usernamePassword(credentialsId: 'dockerhub', passwordVariable: 'dockerHubPass', usernameVariable: 'dockerHubUser')]) {
                     sh "docker login -u ${env.dockerHubUser} -p ${env.dockerHubPass}"
-                    sh "docker push ${env.dockerHubUser}/django-notes-app:${BUILD_NUMBER}"
+                    sh "docker push ${env.dockerHubUser}/django-notes-app:${env.BUILD_NUMBER}"
                 }
             }
         }
     stage("Deploy") {
-    steps {
-        script {
-            def previousBuild = env.BUILD_NUMBER.toInteger() - 1
-            echo "Previous Build: ${previousBuild}"
-            echo "Current Build: ${env.BUILD_NUMBER}"
-
-            // Replace IMAGE_TAG with previous build number
-            sh "sed -i 's/IMAGE_TAG/${previousBuild}/g' docker-compose.yml"
-
-            // Handle errors when stopping containers
-            try {
-                sh "docker compose down || true" // Continue even if it fails
-            } catch (Exception e) {
-                echo "Warning: docker compose down failed, but continuing with deployment."
+            steps {
+                script {
+                    def previousBuild = env.BUILD_NUMBER.toInteger() - 1
+                    echo "Previous Build: ${previousBuild}"
+                    echo "Current Build: ${env.BUILD_NUMBER}"
+        
+                    // Replace IMAGE_TAG with previous build number
+                    sh "sed -i 's/IMAGE_TAG/${previousBuild}/g' docker-compose.yml"
+        
+                    // Handle errors when stopping containers
+                    try {
+                        sh "docker compose down || true" // Continue even if it fails
+                    } catch (Exception e) {
+                        echo "Warning: docker compose down failed, but continuing with deployment."
+                    }
+        
+                    // Replace IMAGE_TAG with latest
+                    sh "sed -i 's/IMAGE_TAG/latest/g' docker-compose.yml"
+        
+                    // Handle errors when stopping containers
+                    try {
+                        sh "docker compose down || true" // Continue even if it fails
+                    } catch (Exception e) {
+                        echo "Warning: docker compose down failed, but continuing with deployment."
+                    }
+        
+                    // Replace IMAGE_TAG with the current build number
+                    sh "sed -i 's/IMAGE_TAG/${env.BUILD_NUMBER}/g' docker-compose.yml"
+        
+                    // Start the new container
+                    sh "docker compose up -d"
+                }
             }
-
-            // Replace IMAGE_TAG with latest
-            sh "sed -i 's/IMAGE_TAG/${latest}/g' docker-compose.yml"
-
-            // Handle errors when stopping containers
-            try {
-                sh "docker compose down || true" // Continue even if it fails
-            } catch (Exception e) {
-                echo "Warning: docker compose down failed, but continuing with deployment."
-            }
-
-            // Replace IMAGE_TAG with the current build number
-            sh "sed -i 's/IMAGE_TAG/${env.BUILD_NUMBER}/g' docker-compose.yml"
-
-            // Start the new container
-            sh "docker compose up -d"
         }
-    }
-}
-
     }
 }
