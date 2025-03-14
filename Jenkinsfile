@@ -34,6 +34,7 @@ pipeline {
     stages {
         stage("Cloning"){
             steps{
+                sh "whoami"
                 echo "Cloning code"
                 git url: "https://github.com/medashabari/django-notes-app.git", branch: 'main'
                 echo "Code clone successfully completed"
